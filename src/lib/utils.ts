@@ -34,7 +34,7 @@ export function convertURLSearchParamsToObject(
 }
 
 
-export const CACHYOS_DOWNLOAD_BASE = 'https://cdn77.cachyos.org';
+export const CACHYOS_DOWNLOAD_BASE = 'https://mirror.zyner.org/cachyos';
 
 /**
  * Returns the download mirror URL for CachyOS or Arch Linux packages.
