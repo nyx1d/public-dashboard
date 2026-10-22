@@ -33,6 +33,9 @@ export function convertURLSearchParamsToObject(
   return result;
 }
 
+
+export const CACHYOS_DOWNLOAD_BASE = 'https://cdn77.cachyos.org';
+
 /**
  * Returns the download mirror URL for CachyOS or Arch Linux packages.
  *
@@ -53,7 +56,7 @@ export function getDownloadMirrorUrl(pkg: PackageDetails): string {
   if (isArchlinux) {
     return `https://archlinux.cachyos.org/repo/${repo_name}/os/${arch}/${pkgFile}`;
   } else {
-    return `https://cdn77.cachyos.org/repo/${arch}/${repo_name}/${pkgFile}`;
+    return `${CACHYOS_DOWNLOAD_BASE}/repo/${arch}/${repo_name}/${pkgFile}`;
   }
 }
 
