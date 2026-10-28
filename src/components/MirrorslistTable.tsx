@@ -1,12 +1,6 @@
 'use client';
 
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  getExpandedRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import {createColumnHelper, flexRender, useTable} from '@tanstack/react-table';
 import {ChevronDown, ChevronRight, ChevronsUpDown, Info} from 'lucide-react';
 import {Fragment} from 'react';
 
@@ -24,23 +18,29 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type {Mirror, RepoCheck} from '@/lib/types';
+import {basicFeatures, expandingFeatures} from '@/lib/table';
+import type {Mirror, MirrorBaseline, RepoCheck} from '@/lib/types';
 import {readableDuration} from '@/lib/utils';
 
 import {DateTime} from './DateTime';
 import {Badge} from './ui/badge';
 
 interface MirrorslistTableProps {
-  baselines: {path: string; timestamp: null | number}[];
+  baselines: MirrorBaseline[];
   mirrors: Mirror[];
 }
 
-const baselineColumnHelper = createColumnHelper<{
-  path: string;
-  timestamp: null | number;
-}>();
-const mirrorColumnHelper = createColumnHelper<Mirror>();
-const checkColumnHelper = createColumnHelper<RepoCheck>();
+const baselineColumnHelper = createColumnHelper<
+  typeof basicFeatures,
+  MirrorBaseline
+>();
+const mirrorColumnHelper = createColumnHelper<
+  typeof expandingFeatures,
+  Mirror
+>();
+const checkColumnHelper = createColumnHelper<typeof basicFeatures, RepoCheck>();
+
+const alwaysExpandable = () => true;
 
 export default function MirrorslistTable({
   baselines,
@@ -48,8 +48,8 @@ export default function MirrorslistTable({
 }: MirrorslistTableProps) {
   'use no memo'; // TODO: https://github.com/TanStack/table/issues/6137
 
-  const mirrorColumns = [
-    mirrorColumnHelper.accessor('name', {
+  const mirrorColumns = mirrorColumnHelper.columns([
+    mirrorColumnHelper.accessor(row => new URL(row.url).hostname, {
       cell: ({getValue, row}) => (
         <div className="flex items-center gap-2">
           {row.getIsExpanded() ? (
@@ -61,18 +61,13 @@ export default function MirrorslistTable({
         </div>
       ),
       header: 'Name',
+      id: 'name',
       meta: {
         headerClassName: 'md:min-w-[300px]',
       },
     }),
-    mirrorColumnHelper.accessor('averageLagSeconds', {
-      cell: ({getValue}) => (
-        <span>
-          {getValue() === null
-            ? '-'
-            : readableDuration((getValue() ?? 0) / 1000)}
-        </span>
-      ),
+    mirrorColumnHelper.accessor('average_lag_seconds', {
+      cell: ({getValue}) => <span>{readableLag(getValue())}</span>,
       header: 'Average Lag',
       meta: {
         headerClassName: 'md:min-w-[200px]',
@@ -93,7 +88,7 @@ export default function MirrorslistTable({
         headerClassName: 'md:w-[200px]',
       },
     }),
-    mirrorColumnHelper.accessor('overallStatus', {
+    mirrorColumnHelper.accessor('overall_status', {
       cell: ({getValue}) => {
         const status = getValue();
         const variant =
@@ -109,15 +104,14 @@ export default function MirrorslistTable({
         headerClassName: 'md:w-[200px]',
       },
     }),
-  ];
+  ]);
 
   // eslint-disable-next-line react-hooks/incompatible-library
-  const mirrorsTable = useReactTable({
+  const mirrorsTable = useTable({
     columns: mirrorColumns,
     data: mirrors,
-    getCoreRowModel: getCoreRowModel(),
-    getExpandedRowModel: getExpandedRowModel(),
-    getRowCanExpand: () => true,
+    features: expandingFeatures,
+    getRowCanExpand: alwaysExpandable,
   });
 
   return (
@@ -152,7 +146,6 @@ export default function MirrorslistTable({
                   <Fragment key={row.id}>
                     <TableRow
                       className="cursor-pointer hover:bg-muted/50"
-                      data-state={row.getIsSelected() && 'selected'}
                       onClick={row.getToggleExpandedHandler()}
                     >
                       {row.getVisibleCells().map(cell => (
@@ -208,7 +201,7 @@ export default function MirrorslistTable({
         <CollapsibleTrigger asChild>
           <Button className="p-0" size="sm" variant="outline">
             <p>Builder Latest Status</p>
-            <ChevronsUpDown className="h-4 w-4" />
+            <ChevronsUpDown className="h-4 w-4" data-icon="inline-end" />
             <span className="sr-only">Toggle</span>
           </Button>
         </CollapsibleTrigger>
@@ -222,14 +215,10 @@ export default function MirrorslistTable({
   );
 }
 
-function BaselinesTable({
-  baselines,
-}: {
-  baselines: {path: string; timestamp: null | number}[];
-}) {
+function BaselinesTable({baselines}: {baselines: MirrorBaseline[]}) {
   'use no memo'; // TODO: https://github.com/TanStack/table/issues/6137
 
-  const columns = [
+  const columns = baselineColumnHelper.columns([
     baselineColumnHelper.accessor('path', {
       header: 'Path',
       meta: {
@@ -243,13 +232,13 @@ function BaselinesTable({
         headerClassName: 'md:min-w-[300px]',
       },
     }),
-  ];
+  ]);
 
   // eslint-disable-next-line react-hooks/incompatible-library
-  const table = useReactTable({
+  const table = useTable({
     columns,
     data: baselines,
-    getCoreRowModel: getCoreRowModel(),
+    features: basicFeatures,
   });
 
   return (
@@ -278,10 +267,7 @@ function BaselinesTable({
       <TableBody>
         {table.getRowModel().rows?.length ? (
           table.getRowModel().rows.map(row => (
-            <TableRow
-              data-state={row.getIsSelected() && 'selected'}
-              key={row.id}
-            >
+            <TableRow key={row.id}>
               {row.getVisibleCells().map(cell => (
                 <TableCell
                   className={cell.column.columnDef.meta?.cellClassName}
@@ -304,27 +290,29 @@ function BaselinesTable({
   );
 }
 
+/**
+ * Formats a sync lag, dashing out mirrors that are not behind the builder.
+ */
+function readableLag(seconds: null | number): string {
+  return seconds === null || seconds <= 0 ? '-' : readableDuration(seconds);
+}
+
 function RepoChecksTable({checks}: {checks: RepoCheck[]}) {
   'use no memo'; // TODO: https://github.com/TanStack/table/issues/6137
 
-  const columns = [
+  const columns = checkColumnHelper.columns([
     checkColumnHelper.accessor('path', {
       header: 'Repo Path',
     }),
-    checkColumnHelper.accessor('lastUpdated', {
+    checkColumnHelper.accessor('last_updated', {
       cell: ({getValue}) => {
         const date = getValue();
-        return date ? <DateTime timestamp={date} /> : '-';
+        return date ? <DateTime timestamp={Date.parse(date)} /> : '-';
       },
       header: 'Last Updated',
     }),
-    checkColumnHelper.accessor('syncLagSeconds', {
-      cell: ({getValue}) => {
-        const duration = getValue();
-        return duration === null || duration === 0
-          ? '-'
-          : readableDuration(duration / 1000);
-      },
+    checkColumnHelper.accessor('sync_lag_seconds', {
+      cell: ({getValue}) => readableLag(getValue()),
       header: 'Lag',
     }),
     checkColumnHelper.accessor('status', {
@@ -340,13 +328,13 @@ function RepoChecksTable({checks}: {checks: RepoCheck[]}) {
       },
       header: 'Status',
     }),
-  ];
+  ]);
 
   // eslint-disable-next-line react-hooks/incompatible-library
-  const table = useReactTable({
+  const table = useTable({
     columns,
     data: checks,
-    getCoreRowModel: getCoreRowModel(),
+    features: basicFeatures,
   });
 
   return (

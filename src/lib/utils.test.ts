@@ -2,6 +2,7 @@ import {describe, expect, test} from 'bun:test';
 
 import {PackageArch, type PackageDetails} from './types';
 import {
+  CACHYOS_DOWNLOAD_BASE,
   convertURLSearchParamsToObject,
   getDownloadMirrorUrl,
   getPkgverWithoutBuildnum,
@@ -129,7 +130,7 @@ describe('getDownloadMirrorUrl', () => {
       repo_name: 'cachyos',
     });
     expect(getDownloadMirrorUrl(x86_64Pkg)).toBe(
-      'https://cdn77.cachyos.org/repo/x86_64/cachyos/foo-2.3.4-1-x86_64.pkg.tar.zst'
+      `${CACHYOS_DOWNLOAD_BASE}/repo/x86_64/cachyos/foo-2.3.4-1-x86_64.pkg.tar.zst`
     );
 
     const anyArchPkg = makePkg({
@@ -139,7 +140,7 @@ describe('getDownloadMirrorUrl', () => {
       repo_name: 'cachyos',
     });
     expect(getDownloadMirrorUrl(anyArchPkg)).toBe(
-      'https://cdn77.cachyos.org/repo/x86_64/cachyos/bar-1.0.0-2-any.pkg.tar.zst'
+      `${CACHYOS_DOWNLOAD_BASE}/repo/x86_64/cachyos/bar-1.0.0-2-any.pkg.tar.zst`
     );
   });
 
@@ -151,7 +152,7 @@ describe('getDownloadMirrorUrl', () => {
       repo_name: 'cachyos-v3',
     });
     expect(getDownloadMirrorUrl(v3Pkg)).toBe(
-      'https://cdn77.cachyos.org/repo/x86_64_v3/cachyos-v3/v3pkg-2.0.0-2-x86_64_v3.pkg.tar.zst'
+      `${CACHYOS_DOWNLOAD_BASE}/repo/x86_64_v3/cachyos-v3/v3pkg-2.0.0-2-x86_64_v3.pkg.tar.zst`
     );
 
     const v4Pkg = makePkg({
@@ -161,7 +162,7 @@ describe('getDownloadMirrorUrl', () => {
       repo_name: 'cachyos-znver4',
     });
     expect(getDownloadMirrorUrl(v4Pkg)).toBe(
-      'https://cdn77.cachyos.org/repo/x86_64_v4/cachyos-znver4/znver4pkg-0.1.0-1-x86_64_v4.pkg.tar.zst'
+      `${CACHYOS_DOWNLOAD_BASE}/repo/x86_64_v4/cachyos-znver4/znver4pkg-0.1.0-1-x86_64_v4.pkg.tar.zst`
     );
   });
 
@@ -173,7 +174,7 @@ describe('getDownloadMirrorUrl', () => {
       repo_name: 'cachyos',
     });
     expect(getDownloadMirrorUrl(pkg)).toBe(
-      'https://cdn77.cachyos.org/repo/x86_64/cachyos/foo%2Fbar%40baz-1.0.0%3Abeta%2B1-x86_64.pkg.tar.zst'
+      `${CACHYOS_DOWNLOAD_BASE}/repo/x86_64/cachyos/foo%2Fbar%40baz-1.0.0%3Abeta%2B1-x86_64.pkg.tar.zst`
     );
   });
 });

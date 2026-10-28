@@ -160,8 +160,8 @@ export function PackageTablePagination({
           size="sm"
           variant="ghost"
         >
-          <ChevronLeft />
-          <span>Previous</span>
+          <ChevronLeft data-icon="inline-start" />
+          <span className="sm:sr-only">Previous</span>
         </Button>
 
         <div className="hidden items-center gap-2 sm:flex">
@@ -198,8 +198,8 @@ export function PackageTablePagination({
           size="sm"
           variant="ghost"
         >
-          <span>Next</span>
-          <ChevronRight />
+          <span className="sm:sr-only">Next</span>
+          <ChevronRight data-icon="inline-end" />
         </Button>
       </div>
     </div>
