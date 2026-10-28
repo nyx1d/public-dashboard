@@ -1,16 +1,30 @@
-import {ChevronLeft, ChevronRight} from 'lucide-react';
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { UIEvent } from "react";
 
-import {Button} from '@/components/ui/button';
-import {Label} from '@/components/ui/label';
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import {PAGE_SIZE} from '@/lib/types';
-import {ELLIPSIS, pagination} from '@/lib/utils';
+} from "@/components/ui/select";
+import { PAGE_SIZE } from "@/lib/types";
+import { ELLIPSIS, pagination } from "@/lib/utils";
+
+const PAGE_CHUNK = 100;
+const LOAD_THRESHOLD_PX = 80;
+
+type PageRange = { start: number; end: number };
+
+function initialPageRange(currentPage: number, totalPages: number): PageRange {
+  return {
+    start: Math.max(1, currentPage - PAGE_CHUNK),
+    end: Math.min(totalPages, currentPage + PAGE_CHUNK),
+  };
+}
 
 export function PackageTablePagination({
   currentPage,
@@ -28,6 +42,61 @@ export function PackageTablePagination({
   totalPages: number;
 }) {
   const pages = pagination(currentPage, totalPages);
+  const [pageRange, setPageRange] = useState(() =>
+    initialPageRange(currentPage, totalPages),
+  );
+  const prependScrollRef = useRef<{
+    viewport: HTMLDivElement;
+    previousHeight: number;
+  } | null>(null);
+
+  // A new query/filter can change the page count. Keep the selected page mounted.
+  useEffect(() => {
+    setPageRange(initialPageRange(currentPage, totalPages));
+    prependScrollRef.current = null;
+  }, [currentPage, totalPages]);
+
+  // Prepending items increases scrollHeight: compensate so the menu doesn't jump.
+  useLayoutEffect(() => {
+    const pending = prependScrollRef.current;
+    if (!pending) return;
+    pending.viewport.scrollTop +=
+      pending.viewport.scrollHeight - pending.previousHeight;
+    prependScrollRef.current = null;
+  }, [pageRange.start]);
+
+  const handlePageListScroll = (event: UIEvent<HTMLDivElement>) => {
+    // Radix scrolls the inner Viewport, not the SelectContent wrapper.
+    const target = event.target;
+    if (!(target instanceof HTMLDivElement)) return;
+    if (
+      target.dataset.slot !== "select-viewport" &&
+      !target.hasAttribute("data-radix-select-viewport")
+    )
+      return;
+
+    if (target.scrollTop <= LOAD_THRESHOLD_PX && pageRange.start > 1) {
+      prependScrollRef.current = {
+        viewport: target,
+        previousHeight: target.scrollHeight,
+      };
+      setPageRange((previous) => ({
+        ...previous,
+        start: Math.max(1, previous.start - PAGE_CHUNK),
+      }));
+    }
+
+    if (
+      target.scrollHeight - target.scrollTop - target.clientHeight <=
+        LOAD_THRESHOLD_PX &&
+      pageRange.end < totalPages
+    ) {
+      setPageRange((previous) => ({
+        ...previous,
+        end: Math.min(totalPages, previous.end + PAGE_CHUNK),
+      }));
+    }
+  };
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -40,22 +109,30 @@ export function PackageTablePagination({
             Page
           </Label>
           <Select
-            onValueChange={value => onClick(Number(value))}
+            onOpenChange={(open) => {
+              if (open) {
+                prependScrollRef.current = null;
+                setPageRange(initialPageRange(currentPage, totalPages));
+              }
+            }}
+            onValueChange={(value) => onClick(Number(value))}
             value={currentPage.toString()}
           >
             <SelectTrigger className="w-28" id="page-picker" size="sm">
               <SelectValue placeholder={`${currentPage} / ${totalPages}`} />
             </SelectTrigger>
-            <SelectContent side="top">
-              {Array.from({length: totalPages}, (_, index) => {
-                const page = index + 1;
-
-                return (
-                  <SelectItem key={page} value={`${page}`}>
-                    {page} / {totalPages}
-                  </SelectItem>
-                );
-              })}
+            <SelectContent onScrollCapture={handlePageListScroll} side="top">
+              {Array.from(
+                { length: Math.max(0, pageRange.end - pageRange.start + 1) },
+                (_, index) => {
+                  const page = pageRange.start + index;
+                  return (
+                    <SelectItem key={page} value={`${page}`}>
+                      {page} / {totalPages}
+                    </SelectItem>
+                  );
+                },
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -71,9 +148,9 @@ export function PackageTablePagination({
             <SelectValue placeholder={pageSize} />
           </SelectTrigger>
           <SelectContent side="top">
-            {PAGE_SIZE.map(pageSize => (
-              <SelectItem key={pageSize} value={`${pageSize}`}>
-                {pageSize}
+            {PAGE_SIZE.map((size) => (
+              <SelectItem key={size} value={`${size}`}>
+                {size}
               </SelectItem>
             ))}
           </SelectContent>
@@ -97,7 +174,6 @@ export function PackageTablePagination({
         <div className="hidden items-center gap-2 sm:flex">
           {pages.map((page, index) => {
             const pageKey = `${page}-${index}`;
-
             if (page === ELLIPSIS) {
               return (
                 <Button disabled key={pageKey} size="sm" variant="ghost">
@@ -105,7 +181,6 @@ export function PackageTablePagination({
                 </Button>
               );
             }
-
             return (
               <Button
                 key={pageKey}
@@ -113,7 +188,7 @@ export function PackageTablePagination({
                 onFocus={() => onPrefetch?.(page)}
                 onMouseEnter={() => onPrefetch?.(page)}
                 size="sm"
-                variant={page === currentPage ? 'default' : 'ghost'}
+                variant={page === currentPage ? "default" : "ghost"}
               >
                 {page}
               </Button>
