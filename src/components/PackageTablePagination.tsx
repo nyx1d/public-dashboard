@@ -1,30 +1,23 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { UIEvent } from "react";
+import {ChevronLeft, ChevronRight} from 'lucide-react';
+import type {UIEvent} from 'react';
+import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import {Button} from '@/components/ui/button';
+import {Label} from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { PAGE_SIZE } from "@/lib/types";
-import { ELLIPSIS, pagination } from "@/lib/utils";
+} from '@/components/ui/select';
+import {PAGE_SIZE} from '@/lib/types';
+import {ELLIPSIS, pagination} from '@/lib/utils';
 
 const PAGE_CHUNK = 100;
 const LOAD_THRESHOLD_PX = 80;
 
-type PageRange = { start: number; end: number };
-
-function initialPageRange(currentPage: number, totalPages: number): PageRange {
-  return {
-    start: Math.max(1, currentPage - PAGE_CHUNK),
-    end: Math.min(totalPages, currentPage + PAGE_CHUNK),
-  };
-}
+type PageRange = {end: number; start: number};
 
 export function PackageTablePagination({
   currentPage,
@@ -43,12 +36,12 @@ export function PackageTablePagination({
 }) {
   const pages = pagination(currentPage, totalPages);
   const [pageRange, setPageRange] = useState(() =>
-    initialPageRange(currentPage, totalPages),
+    initialPageRange(currentPage, totalPages)
   );
-  const prependScrollRef = useRef<{
-    viewport: HTMLDivElement;
+  const prependScrollRef = useRef<null | {
     previousHeight: number;
-  } | null>(null);
+    viewport: HTMLDivElement;
+  }>(null);
 
   // A new query/filter can change the page count. Keep the selected page mounted.
   useEffect(() => {
@@ -70,17 +63,17 @@ export function PackageTablePagination({
     const target = event.target;
     if (!(target instanceof HTMLDivElement)) return;
     if (
-      target.dataset.slot !== "select-viewport" &&
-      !target.hasAttribute("data-radix-select-viewport")
+      target.dataset.slot !== 'select-viewport' &&
+      !target.hasAttribute('data-radix-select-viewport')
     )
       return;
 
     if (target.scrollTop <= LOAD_THRESHOLD_PX && pageRange.start > 1) {
       prependScrollRef.current = {
-        viewport: target,
         previousHeight: target.scrollHeight,
+        viewport: target,
       };
-      setPageRange((previous) => ({
+      setPageRange(previous => ({
         ...previous,
         start: Math.max(1, previous.start - PAGE_CHUNK),
       }));
@@ -91,7 +84,7 @@ export function PackageTablePagination({
         LOAD_THRESHOLD_PX &&
       pageRange.end < totalPages
     ) {
-      setPageRange((previous) => ({
+      setPageRange(previous => ({
         ...previous,
         end: Math.min(totalPages, previous.end + PAGE_CHUNK),
       }));
@@ -109,13 +102,13 @@ export function PackageTablePagination({
             Page
           </Label>
           <Select
-            onOpenChange={(open) => {
+            onOpenChange={open => {
               if (open) {
                 prependScrollRef.current = null;
                 setPageRange(initialPageRange(currentPage, totalPages));
               }
             }}
-            onValueChange={(value) => onClick(Number(value))}
+            onValueChange={value => onClick(Number(value))}
             value={currentPage.toString()}
           >
             <SelectTrigger className="w-28" id="page-picker" size="sm">
@@ -123,7 +116,7 @@ export function PackageTablePagination({
             </SelectTrigger>
             <SelectContent onScrollCapture={handlePageListScroll} side="top">
               {Array.from(
-                { length: Math.max(0, pageRange.end - pageRange.start + 1) },
+                {length: Math.max(0, pageRange.end - pageRange.start + 1)},
                 (_, index) => {
                   const page = pageRange.start + index;
                   return (
@@ -131,7 +124,7 @@ export function PackageTablePagination({
                       {page} / {totalPages}
                     </SelectItem>
                   );
-                },
+                }
               )}
             </SelectContent>
           </Select>
@@ -148,7 +141,7 @@ export function PackageTablePagination({
             <SelectValue placeholder={pageSize} />
           </SelectTrigger>
           <SelectContent side="top">
-            {PAGE_SIZE.map((size) => (
+            {PAGE_SIZE.map(size => (
               <SelectItem key={size} value={`${size}`}>
                 {size}
               </SelectItem>
@@ -188,7 +181,7 @@ export function PackageTablePagination({
                 onFocus={() => onPrefetch?.(page)}
                 onMouseEnter={() => onPrefetch?.(page)}
                 size="sm"
-                variant={page === currentPage ? "default" : "ghost"}
+                variant={page === currentPage ? 'default' : 'ghost'}
               >
                 {page}
               </Button>
@@ -211,4 +204,11 @@ export function PackageTablePagination({
       </div>
     </div>
   );
+}
+
+function initialPageRange(currentPage: number, totalPages: number): PageRange {
+  return {
+    end: Math.min(totalPages, currentPage + PAGE_CHUNK),
+    start: Math.max(1, currentPage - PAGE_CHUNK),
+  };
 }
